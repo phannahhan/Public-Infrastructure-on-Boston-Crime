@@ -1,0 +1,34 @@
+---
+title: "about.Rmd"
+author: "Hannah Phan"
+date: "February 26, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(readr)
+library(ggplot2)
+library(janitor)
+library(reprex)
+library(dplyr)
+library(gt)
+```
+My final project will be analyzing transportation data, specifically the Blue Bikes system, traffic- related data (automated traffic recordings ATR and Pedestrian counts PED, however, this data is hosted on a portal that I'm unfamiliar with so I'm not sure if I will be able to scrape the data. I'm planning on meeting with my TF to talk about this), streelight location data, and Park Boston (a mobile app for parking meter payments) data, and parking tickets data for the municipalities of Boston, Brookline, Cambridge and Somerville. With the exception of the traffic-related data, the other data are csv files. I plan on creating a visual representation of this data to highlight potential correlations between different modes of transportation and how one may affect the congestion levels of another. I think it would be interesting to experiment with interactive graphs and overlay the data on top of one another in an intuitive way that would help viewers make inferences on transportation trends in the Greater Boston Area. The link to my repo is: https://github.com/phannahhan/final-project.git.
+
+```{r}
+bluebikes <- read_csv("raw-data/current_bluebikes_stations.csv", skip = 1) %>%
+  clean_names()
+
+streetlights <- read_csv("raw-data/streetlight-locations.csv") %>%
+  clean_names()
+
+parkboston <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv") %>%
+  clean_names()
+
+parkingtickets <- read_csv("raw-data/parking-tickets-portal-web-statistics.csv") %>%
+  clean_names()
+```
+
