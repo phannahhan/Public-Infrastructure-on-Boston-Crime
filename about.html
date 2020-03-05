@@ -186,6 +186,7 @@ summary {
 
 
 <p>My final project will be analyzing transportation data, specifically the Blue Bikes system, traffic- related data (automated traffic recordings ATR and Pedestrian counts PED, however, this data is hosted on a portal that I’m unfamiliar with so I’m not sure if I will be able to scrape the data. I’m planning on meeting with my TF to talk about this), streelight location data, and Park Boston (a mobile app for parking meter payments) data, and parking tickets data for the municipalities of Boston, Brookline, Cambridge and Somerville. With the exception of the traffic-related data, the other data are csv files. I plan on creating a visual representation of this data to highlight potential correlations between different modes of transportation and how one may affect the congestion levels of another. I think it would be interesting to experiment with interactive graphs and overlay the data on top of one another in an intuitive way that would help viewers make inferences on transportation trends in the Greater Boston Area. The link to my repo is: <a href="https://github.com/phannahhan/final-project.git" class="uri">https://github.com/phannahhan/final-project.git</a>.</p>
+<p>An update for milestone #4: I discovered how to use the online portal for traffic data and download the data in a csv file, which there is a lot of (there is at least 100 data points for every day of the year for the past couple of decades. However, only the data for 2014 and 2015 are available for parking tickets and parkboston, respectively, so I need to think about which data makes the most sense to look at. Ideally, I would have data from the same year so that I could observe how one system (bluebikes, streetlights, parkboston, parking tickets, traffic data) affects another. For the traffic data, there are thousands of streets I could pick, so I also need to make a decision about which specific areas I want in my final project. For this milestone, I imported the data from January 15th, 2014. An issue I noticed is that while the website says the data is for the year 2014, the archive year in the table when I viewed it is 2014, while the collection date varies drastically. It seems like the traffic data will be my limiting dataset since data for only a select number of intersections is available.</p>
 <pre class="r"><code>bluebikes &lt;- read_csv(&quot;raw-data/current_bluebikes_stations.csv&quot;, skip = 1) %&gt;%
   clean_names()</code></pre>
 <pre><code>## Parsed with column specification:
@@ -198,6 +199,21 @@ summary {
 ##   Public = col_character(),
 ##   `Total docks` = col_double()
 ## )</code></pre>
+<pre class="r"><code>bluebikes</code></pre>
+<pre><code>## # A tibble: 330 x 7
+##    number name                    latitude longitude district public total_docks
+##    &lt;chr&gt;  &lt;chr&gt;                      &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;        &lt;dbl&gt;
+##  1 A32019 175 N Harvard St            42.4     -71.1 Boston   Yes             18
+##  2 S32035 191 Beacon St               42.4     -71.1 Somervi… Yes             19
+##  3 S32023 30 Dane St                  42.4     -71.1 Somervi… Yes             15
+##  4 M32026 359 Broadway - Broadwa…     42.4     -71.1 Cambrid… Yes             23
+##  5 M32054 699 Mt Auburn St            42.4     -71.1 Cambrid… Yes             25
+##  6 B32060 700 Commonwealth Ave.       42.3     -71.1 Boston   Yes             12
+##  7 M32060 700 Huron Ave               42.4     -71.2 Cambrid… Yes             19
+##  8 M32064 75 Binney St                42.4     -71.1 Cambrid… Yes             19
+##  9 M32058 84 Cambridgepark Dr         42.4     -71.1 Cambrid… Yes             25
+## 10 C32065 Adams St at Lonsdale St     42.3     -71.1 Boston   Yes              0
+## # … with 320 more rows</code></pre>
 <pre class="r"><code>streetlights &lt;- read_csv(&quot;raw-data/streetlight-locations.csv&quot;) %&gt;%
   clean_names()</code></pre>
 <pre><code>## Parsed with column specification:
@@ -208,7 +224,22 @@ summary {
 ##   Lat = col_double(),
 ##   Long = col_double()
 ## )</code></pre>
-<pre class="r"><code>parkboston &lt;- read_csv(&quot;raw-data/park-boston-monthly-transactions-by-zone-2015.csv&quot;) %&gt;%
+<pre class="r"><code>streetlights</code></pre>
+<pre><code>## # A tibble: 74,065 x 5
+##    the_geom                                      objectid type    lat  long
+##    &lt;chr&gt;                                            &lt;dbl&gt; &lt;chr&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1 POINT (-71.0760443807948 42.35315925057316)          1 LIGHT  42.4 -71.1
+##  2 POINT (-71.07538171240694 42.353347768071195)        2 LIGHT  42.4 -71.1
+##  3 POINT (-71.07477488057383 42.35352052068278)         3 LIGHT  42.4 -71.1
+##  4 POINT (-71.07440373484715 42.3535558201314)          4 LIGHT  42.4 -71.1
+##  5 POINT (-71.07362079549182 42.35381056415504)         5 LIGHT  42.4 -71.1
+##  6 POINT (-71.07325501418602 42.3539109113942)          6 LIGHT  42.4 -71.1
+##  7 POINT (-71.07292162030087 42.354000153832814)        7 LIGHT  42.4 -71.1
+##  8 POINT (-71.0724038233387 42.35414092034717)          8 LIGHT  42.4 -71.1
+##  9 POINT (-71.07866370176541 42.35492688534045)         9 LIGHT  42.4 -71.1
+## 10 POINT (-71.07921632936232 42.35482231438127)        10 LIGHT  42.4 -71.1
+## # … with 74,055 more rows</code></pre>
+<pre class="r"><code>parkboston2015 &lt;- read_csv(&quot;raw-data/park-boston-monthly-transactions-by-zone-2015.csv&quot;) %&gt;%
   clean_names()</code></pre>
 <pre><code>## Parsed with column specification:
 ## cols(
@@ -228,13 +259,76 @@ summary {
 ##   December = col_logical(),
 ##   `GT by Zone` = col_double()
 ## )</code></pre>
-<pre class="r"><code>parkingtickets &lt;- read_csv(&quot;raw-data/parking-tickets-portal-web-statistics.csv&quot;) %&gt;%
+<pre class="r"><code>parkboston2015</code></pre>
+<pre><code>## # A tibble: 572 x 15
+##    number zone_name january february march april   may  june  july august
+##     &lt;dbl&gt; &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;lgl&gt; 
+##  1    478 North Ch…     147      456   602   719   714   841   316 NA    
+##  2    888 East New…     138      289   600   640   632   703   306 NA    
+##  3    561 South Ne…       0        0     4   540   825  1289   477 NA    
+##  4    892 East New…     119      340   457   502   558   773   322 NA    
+##  5    924 North Bo…     104      248   470   529   605   687   298 NA    
+##  6    889 West New…      94      254   432   560   651   637   273 NA    
+##  7    887 West New…      85      264   467   593   539   593   287 NA    
+##  8    890 East New…      92      229   385   479   601   704   272 NA    
+##  9    928 North Bo…      47      233   446   476   595   687   240 NA    
+## 10     25 South Bo…      95      186   461   457   571   665   248 NA    
+## # … with 562 more rows, and 5 more variables: september &lt;lgl&gt;, october &lt;lgl&gt;,
+## #   november &lt;lgl&gt;, december &lt;lgl&gt;, gt_by_zone &lt;dbl&gt;</code></pre>
+<pre class="r"><code>parkingtickets2014 &lt;- read_csv(&quot;raw-data/parking-tickets-portal-web-statistics.csv&quot;) %&gt;%
   clean_names()</code></pre>
 <pre><code>## Parsed with column specification:
 ## cols(
 ##   `Day Index` = col_character(),
 ##   Pageviews = col_double()
 ## )</code></pre>
+<pre class="r"><code>parkingtickets2014</code></pre>
+<pre><code>## # A tibble: 366 x 2
+##    day_index              pageviews
+##    &lt;chr&gt;                      &lt;dbl&gt;
+##  1 01/01/2014 12:00:00 AM       897
+##  2 01/02/2014 12:00:00 AM      1858
+##  3 01/03/2014 12:00:00 AM      1523
+##  4 01/04/2014 12:00:00 AM      1077
+##  5 01/05/2014 12:00:00 AM      1185
+##  6 01/06/2014 12:00:00 AM      2598
+##  7 01/07/2014 12:00:00 AM      2300
+##  8 01/08/2014 12:00:00 AM      2161
+##  9 01/09/2014 12:00:00 AM      2165
+## 10 01/10/2014 12:00:00 AM      1940
+## # … with 356 more rows</code></pre>
+<pre class="r"><code>trafficdata2014 &lt;- read_csv(&quot;raw-data/trafficdata.csv&quot;)</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   `Archive Date` = col_character(),
+##   `Associated Streets` = col_character(),
+##   `Collection Date` = col_character(),
+##   `Data Type` = col_logical(),
+##   `Intersection Number` = col_double(),
+##   `Neighborhood Code` = col_character(),
+##   `Original File Name` = col_character(),
+##   `Site Location` = col_logical(),
+##   `Street Name` = col_logical(),
+##   `Study Period` = col_character(),
+##   `Study Type` = col_character()
+## )</code></pre>
+<pre class="r"><code>trafficdata2014</code></pre>
+<pre><code>## # A tibble: 56 x 11
+##    `Archive Date` `Associated Str… `Collection Dat… `Data Type` `Intersection N…
+##    &lt;chr&gt;          &lt;chr&gt;            &lt;chr&gt;            &lt;lgl&gt;                  &lt;dbl&gt;
+##  1 01/15/2014 07… D ST, RAMP DB    12-02-2008       NA                      4116
+##  2 01/15/2014 07… D ST, RAMP DB    07-25-2013       NA                      4116
+##  3 01/15/2014 07… LINCOLN ST, SOU… 07-30-2013       NA                      4109
+##  4 01/15/2014 07… ALBANY ST, SOUT… 12-16-2008       NA                      4110
+##  5 01/15/2014 07… ALBANY ST, SOUT… 07-30-2013       NA                      4110
+##  6 01/15/2014 07… SUMMER ST, WEST… 12-03-2008       NA                      4111
+##  7 01/15/2014 07… SUMMER ST, WEST… 07-25-2013       NA                      4111
+##  8 01/15/2014 07… FRONTAGE RD NB,… 12-04-2008       NA                      4114
+##  9 01/15/2014 07… BOWKER OVERPASS… 04-27-2011       NA                      9007
+## 10 01/15/2014 07… BROOKLINE AVE, … 04-12-2011       NA                      9011
+## # … with 46 more rows, and 6 more variables: `Neighborhood Code` &lt;chr&gt;,
+## #   `Original File Name` &lt;chr&gt;, `Site Location` &lt;lgl&gt;, `Street Name` &lt;lgl&gt;,
+## #   `Study Period` &lt;chr&gt;, `Study Type` &lt;chr&gt;</code></pre>
 
 
 

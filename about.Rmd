@@ -18,17 +18,28 @@ library(gt)
 ```
 My final project will be analyzing transportation data, specifically the Blue Bikes system, traffic- related data (automated traffic recordings ATR and Pedestrian counts PED, however, this data is hosted on a portal that I'm unfamiliar with so I'm not sure if I will be able to scrape the data. I'm planning on meeting with my TF to talk about this), streelight location data, and Park Boston (a mobile app for parking meter payments) data, and parking tickets data for the municipalities of Boston, Brookline, Cambridge and Somerville. With the exception of the traffic-related data, the other data are csv files. I plan on creating a visual representation of this data to highlight potential correlations between different modes of transportation and how one may affect the congestion levels of another. I think it would be interesting to experiment with interactive graphs and overlay the data on top of one another in an intuitive way that would help viewers make inferences on transportation trends in the Greater Boston Area. The link to my repo is: https://github.com/phannahhan/final-project.git.
 
+An update for milestone #4: I discovered how to use the online portal for traffic data and download the data in a csv file, which there is a lot of (there is at least 100 data points for every day of the year for the past couple of decades. However, only the data for 2014 and 2015 are available for parking tickets and parkboston, respectively, so I need to think about which data makes the most sense to look at. Ideally, I would have data from the same year so that I could observe how one system (bluebikes, streetlights, parkboston, parking tickets, traffic data) affects another. For the traffic data, there are thousands of streets I could pick, so I also need to make a decision about which specific areas I want in my final project. For this milestone, I imported the data from January 15th, 2014. An issue I noticed is that while the website says the data is for the year 2014, the archive year in the table when I viewed it is 2014, while the collection date varies drastically. It seems like the traffic data will be my limiting dataset since data for only a select number of intersections is available.
+
 ```{r}
 bluebikes <- read_csv("raw-data/current_bluebikes_stations.csv", skip = 1) %>%
   clean_names()
+bluebikes
 
 streetlights <- read_csv("raw-data/streetlight-locations.csv") %>%
   clean_names()
+streetlights
 
-parkboston <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv") %>%
+parkboston2015 <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv") %>%
   clean_names()
+parkboston2015
 
-parkingtickets <- read_csv("raw-data/parking-tickets-portal-web-statistics.csv") %>%
+parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.csv") %>%
   clean_names()
+parkingtickets2014
+
+trafficdata2014 <- read_csv("raw-data/trafficdata.csv")
+
+trafficdata2014
+
 ```
 
