@@ -1,0 +1,85 @@
+---
+title: "graphics"
+author: "Hannah Phan"
+date: "March 20, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidycensus)
+library(janitor)
+library(gt)
+library(haven)
+library(infer)
+library(fivethirtyeight)
+options(scipen = 999)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggspatial)
+```
+
+```{r data, include = FALSE}
+bluebikes <- read_csv("raw-data/current_bluebikes_stations.csv", skip = 1) %>%
+  clean_names()
+
+streetlights <- read_csv("raw-data/streetlight-locations.csv") %>%
+  clean_names()
+
+parkboston2015 <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv") %>%
+  clean_names()
+
+parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.csv") %>%
+  clean_names()
+
+trafficdata2014 <- read_csv("raw-data/trafficdata.csv")
+
+bluebikes_sorted_lat <- bluebikes %>%
+  select(latitude) %>%
+  arrange(desc(latitude))
+
+bluebikes_sorted_long <- bluebikes %>%
+  select(longitude) %>%
+  arrange(longitude)
+```
+
+```{r bluebikes map, echo = FALSE}
+## I used instructions from
+## https://www.r-spatial.org/r/2018/10/25/ggplot2-sf.html. I realized I only
+## wanted to map within a specific latitudinal/longitudinal range because the
+## bluebike data is only for the city of Boston. To determine the range, I
+## sorted the bluebikes table by latitude in descending order, and then by
+## longitude. Once I made the map, to plot the locations of the bikes, I used
+## geom_point. I also added the locations for the streetlights in a separate
+## map, but I realized there's a higher density of streetlights than bluebikes,
+## so I'll need to restyle the map for the next milestone.
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+bluebike_map <- ggplot(data = world) +
+  geom_sf(color = "black", fill = "lightgreen") +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+                         pad_x = unit(0.3, "in"), pad_y = unit(0.3, "in"),
+                         style = north_arrow_fancy_orienteering) +
+  xlab("Longitude") + ylab("Latitude") +
+  ggtitle("Boston Area Bluebike Map") +
+  coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
+           expand = FALSE) +
+  geom_point(bluebikes, mapping = aes(longitude, latitude), color = "blue")
+
+
+
+bluebike_streelight_map <- bluebike_map +
+  geom_point(streetlights, mapping = aes(long, lat), color = "yellow") +
+  ggtitle("Boston Area Bluebike and Streetlights Map")
+
+bluebike_map
+bluebike_streelight_map
+
+```
+
+
