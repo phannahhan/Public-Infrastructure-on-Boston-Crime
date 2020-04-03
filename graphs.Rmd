@@ -98,6 +98,7 @@ bluebike_streetlight_map %>%
 ggsave(filename = file.path("final_project_shiny","bluebike_streetlight_map.png"))
 
 ```
+link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
 
 
