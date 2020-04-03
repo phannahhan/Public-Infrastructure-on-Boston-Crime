@@ -73,13 +73,32 @@ bluebike_map <- ggplot(data = world) +
 
 
 
-bluebike_streelight_map <- bluebike_map +
-  geom_point(streetlights, mapping = aes(long, lat), color = "yellow") +
+bluebike_streetlight_map <- bluebike_map +
+  geom_point(streetlights, mapping = aes(long, lat), color = "yellow", alpha = 0.01) +
   ggtitle("Boston Area Bluebike and Streetlights Map")
 
 bluebike_map
-bluebike_streelight_map
+bluebike_streetlight_map
+
+# look into cex argument to adjust size of the dots? check out social explorer
+# or american census data to see how many commuters are in the area ACS survey,
+# adjust alpha level = 0.5 to overlay the dots
+# For milestone 6 try making a shiny app with an animated graph that shows the
+# changes in bluebike stations over the years (assuming lights are more 
+# constant)
+```
+
+```{r shinygraph, include = FALSE}
+
+# To make my shiny app, I followed the same format as ps6 to save my desired
+# graphic into a file in a folder in my repo and then rendered that image in the
+# app.R file. I want to build onto this by adding animations.
+
+bluebike_streetlight_map %>%
+ggsave(filename = file.path("final_project_shiny","bluebike_streetlight_map.png"))
 
 ```
+
+
 
 
