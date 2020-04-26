@@ -13,7 +13,7 @@ library(shiny)
 ui <- fluidPage(
    
    # Application title
-   titlePanel("Bluebike and Streetlight Map of Boston"),
+   titlePanel("Map of Suffolk County, Massachusetts"),
    
       
       # Show a plot of the generated distribution
@@ -27,7 +27,7 @@ server <- function(input, output) {
    
    output$distPlot <- renderImage({
      # Return a list containing the filename
-     list(src = "bluebike_streetlight_map.png",
+     list(src = "suffolk_map.png",
           contentType = 'image/png',
           width = 600,
           height = 600,
