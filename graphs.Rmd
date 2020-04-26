@@ -46,8 +46,8 @@ parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.c
 trafficdata2014 <- read_csv("raw-data/trafficdata.csv", col_types = cols())
 
 crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols())%>%
-  filter(!is.na(Lat) | !is.na(Long)) %>%
-  filter(!is.na(YEAR))
+  na.omit()
+  
 
 trees <- read_csv("raw-data/Trees.csv", col_types = cols())
 
@@ -159,13 +159,17 @@ ggsave(filename = file.path("final_project_shiny","bluebike_streetlight_map.png"
 link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
 ```{r crime density plot}
-suffolk + stat_density2d(data = crime,
-                 aes(x = Lat, y = Long, alpha=.75, fill=..level..),
+
+auto_theft <- crime %>%
+  filter(OFFENSE_CODE_GROUP == "Auto Theft") %>%
+                   
+suffolk_map + stat_density2d(data = auto_theft,
+                mapping = aes(x = Long, y = Lat, alpha=.75, fill=..level..),
                  bins = 8,
                  geom = 'polygon') +
   guides(fill = guide_colorbar(barwidth = 1, barheight = 10)) +
-  geom_point(data=crime,aes(x=Lat,y=Long),
-             col='gray', alpha=.5,size=1) +
+  geom_point(data=auto_theft,aes(x = Lat, y = Long),
+             col='red', alpha=.5,size=1) +
   scale_alpha(guide = FALSE) +
   xlab('')+ylab('') +
   ggtitle('Crimes - 2015 to 2020 - Boston, MA')
