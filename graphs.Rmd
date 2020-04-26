@@ -65,6 +65,16 @@ hubway <- read_csv("raw-data/Hubway_Stations.csv", col_types = cols())
 ## map, but I realized there's a higher density of streetlights than bluebikes,
 ## so I'll need to restyle the map for the next milestone.
 
+# Used tidycensus for map of Boston; superimposed bike, tree, streetlight, and
+# crime data over it.
+
+# finding the average crime levels in areas with concentrated lights, bluebikes,
+# trees, trash receptacles, traffic statistical aspect can come from calculating
+# the densities, and then computing the correlation amongst densities. gganimate
+# of crime over time. Color dots, or size the dots based off of severity of
+# crime. Need to clean crime data to remove na values, maps for bikes and lights
+# need to show points. Facet wrap by type of crime. Group crime by year.
+
 census_api_key("9f9584127dd506cdaf80bdb78927e9c01c12f2b8", install = T, overwrite = T)
 
 suffolk <- get_acs(geography = "tract",
@@ -81,23 +91,24 @@ suffolk_map <- suffolk %>%
            expand = FALSE) +
   scale_fill_viridis_c(direction = -1) +
   scale_color_viridis_c(direction = -1) +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+                         pad_x = unit(3.1, "in"), pad_y = unit(0.1, "in"),
+                         style = north_arrow_fancy_orienteering) +
   theme_void()
 
+
 bluebike_map <- suffolk_map +
-  geom_sf(color = "black", fill = "lightgreen") +
-  annotation_north_arrow(location = "bl", which_north = "true", 
-                         pad_x = unit(2.5, "in"), pad_y = unit(0.1, "in"),
-                         style = north_arrow_fancy_orienteering) +
-  ggtitle("Boston Area Bluebike Map") +
+  ggtitle("Bluebike Map of Suffolk County, MA") +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
   geom_point(bluebikes, mapping = aes(longitude, latitude), color = "blue") +
   scale_x_continuous(name = "Long", breaks = c(-71.125, -71.15, -71.05))
 
+
 streetlight_map <- suffolk_map +
   geom_sf(color = "black", fill = "black") +
   geom_point(streetlights, mapping = aes(long, lat), color = "yellow", alpha = 0.01) +
-  ggtitle("Boston Area Streetlights Map")
+  ggtitle("Streetlight Map of Suffolk County, MA")
 
 
 tree_map <- suffolk_map +
@@ -106,12 +117,10 @@ tree_map <- suffolk_map +
        caption = "Boston Analyze Public Tree Data 2011") +
   theme_void()
 
+
 crime_map <- suffolk_map +
   geom_sf(color = "black", fill = "lightgreen") +
-  annotation_north_arrow(location = "bl", which_north = "true", 
-                         pad_x = unit(2.5, "in"), pad_y = unit(.1, "in"),
-                         style = north_arrow_fancy_orienteering) +
-  labs(title = "Boston Area Crime Map",
+  labs(title = "Crime Map of Suffolk County, MA",
        caption = "Source: ANALYZE BOSTON CRIME INCIDENT REPORTS (AUGUST 2015 - TO DATE)") +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
@@ -128,8 +137,7 @@ crime_map
 # or american census data to see how many commuters are in the area ACS survey,
 # adjust alpha level = 0.5 to overlay the dots
 # For milestone 6 try making a shiny app with an animated graph that shows the
-# changes in bluebike stations over the years (assuming lights are more 
-# constant)
+# crime over the years
 
 # https://gis.harvard.edu/
 # https://www.r-bloggers.com/drug-crime-density-in-boston/
@@ -150,21 +158,6 @@ ggsave(filename = file.path("final_project_shiny","bluebike_streetlight_map.png"
 ```
 link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
-```{r maps, cache = T}
-
-# Used tidycensus for map of Boston; superimposed bike, tree, streetlight, and
-# crime data over it.
-
-# finding the average crime levels in areas with concentrated lights, bluebikes,
-# trees, trash receptacles, traffic statistical aspect can come from calculating
-# the densities, and then computing the correlation amongst densities. gganimate
-# of crime over time. Color dots, or size the dots based off of severity of
-# crime. Need to clean crime data to remove na values, maps for bikes and lights
-# need to show points. Facet wrap by type of crime. Group crime by year.
-
-v18 <- load_variables(2018, "acs5", cache = TRUE)
-View(v18)
-```
 ```{r crime density plot}
 suffolk + stat_density2d(data = crime,
                  aes(x = Lat, y = Long, alpha=.75, fill=..level..),
@@ -179,13 +172,20 @@ suffolk + stat_density2d(data = crime,
 ```
 
 
-
-
-
 ```{r animate crime}
 # need to have year object from crime, but map takes suffolk data
 
 suffolk_crime_map + transition_time(YEAR) + 
   labs(title = "Year: {frame_time}")
+```
+
+```{r statistical graphs}
+# finding the average crime levels in areas with concentrated lights, bluebikes,
+# trees, trash receptacles, traffic statistical aspect can come from calculating
+# the densities, and then computing the correlation amongst densities. gganimate
+# of crime over time. Color dots, or size the dots based off of severity of
+# crime. Need to clean crime data to remove na values, maps for bikes and lights
+# need to show points. Facet wrap by type of crime. Group crime by yea
+
 ```
 
