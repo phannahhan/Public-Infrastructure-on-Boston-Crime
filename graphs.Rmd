@@ -21,30 +21,37 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(ggspatial)
+require(maps)
+require(ggmap)
+options(tigris_class = "sf")
+library(tigris)
+options(tigris_use_cache = TRUE)
+library(gganimate)
+theme_set(theme_bw())
 ```
 
-```{r data, include = FALSE}
-bluebikes <- read_csv("raw-data/current_bluebikes_stations.csv", skip = 1) %>%
+```{r data, include = FALSE, cache = T}
+bluebikes <- read_csv("raw-data/current_bluebikes_stations.csv", skip = 1, col_types = cols()) %>%
   clean_names()
 
-streetlights <- read_csv("raw-data/streetlight-locations.csv") %>%
+streetlights <- read_csv("raw-data/streetlight-locations.csv", col_types = cols()) %>%
   clean_names()
 
-parkboston2015 <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv") %>%
+parkboston2015 <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv", col_types = cols()) %>%
   clean_names()
 
-parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.csv") %>%
+parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.csv", col_types = cols()) %>%
   clean_names()
 
-trafficdata2014 <- read_csv("raw-data/trafficdata.csv")
+trafficdata2014 <- read_csv("raw-data/trafficdata.csv", col_types = cols())
 
-bluebikes_sorted_lat <- bluebikes %>%
-  select(latitude) %>%
-  arrange(desc(latitude))
+crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols())%>%
+  filter(!is.na(Lat) | !is.na(Long)) %>%
+  filter(!is.na(YEAR))
 
-bluebikes_sorted_long <- bluebikes %>%
-  select(longitude) %>%
-  arrange(longitude)
+trees <- read_csv("raw-data/Trees.csv", col_types = cols())
+
+hubway <- read_csv("raw-data/Hubway_Stations.csv", col_types = cols())
 ```
 
 ```{r bluebikes map, echo = FALSE}
@@ -60,25 +67,53 @@ bluebikes_sorted_long <- bluebikes %>%
 
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
-bluebike_map <- ggplot(data = world) +
-  geom_sf(color = "black", fill = "lightgreen") +
-  annotation_north_arrow(location = "bl", which_north = "true", 
-                         pad_x = unit(0.3, "in"), pad_y = unit(0.3, "in"),
-                         style = north_arrow_fancy_orienteering) +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Boston Area Bluebike Map") +
+census_api_key("9f9584127dd506cdaf80bdb78927e9c01c12f2b8", install = T, overwrite = T)
+
+suffolk <- get_acs(geography = "tract",
+                  variables = c(medincome = "B19013_001"), 
+                  year = 2018,
+                  state = "MA",
+                  county = "Suffolk County",
+                  geometry = TRUE)
+
+suffolk_map <- suffolk %>%
+  ggplot() +
+  geom_sf() +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
-  geom_point(bluebikes, mapping = aes(longitude, latitude), color = "blue")
+  scale_fill_viridis_c(direction = -1) +
+  scale_color_viridis_c(direction = -1) +
+  labs(caption = "Source: American Community Survey 2014-2018") +
+  theme_void()
 
+bluebike_map <- suffolk_map +
+  geom_sf(color = "black", fill = "lightgreen") +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+                         pad_x = unit(2.5, "in"), pad_y = unit(0.1, "in"),
+                         style = north_arrow_fancy_orienteering) +
+  ggtitle("Boston Area Bluebike Map") +
+  geom_point(bluebikes, mapping = aes(longitude, latitude), color = "blue") +
+  scale_x_continuous(name = "Long", breaks = c(-71.125, -71.15, -71.05))
 
 
 bluebike_streetlight_map <- bluebike_map +
   geom_point(streetlights, mapping = aes(long, lat), color = "yellow", alpha = 0.01) +
   ggtitle("Boston Area Bluebike and Streetlights Map")
 
+crime_map <- ggplot(data = world) +
+  geom_sf(color = "black", fill = "lightgreen") +
+  annotation_north_arrow(location = "bl", which_north = "true", 
+                         pad_x = unit(2.5, "in"), pad_y = unit(.1, "in"),
+                         style = north_arrow_fancy_orienteering) +
+  ggtitle("Boston Area Crime Map") +
+  coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
+           expand = FALSE) +
+  geom_point(crime, mapping = aes(Long, Lat), color = "red", alpha = 0.01) +
+  scale_x_continuous(name = "Long", breaks = c(-71.125, -71.15, -71.05))
+
 bluebike_map
 bluebike_streetlight_map
+crime_map
 
 # look into cex argument to adjust size of the dots? check out social explorer
 # or american census data to see how many commuters are in the area ACS survey,
@@ -86,6 +121,12 @@ bluebike_streetlight_map
 # For milestone 6 try making a shiny app with an animated graph that shows the
 # changes in bluebike stations over the years (assuming lights are more 
 # constant)
+
+# https://gis.harvard.edu/
+# https://www.r-bloggers.com/drug-crime-density-in-boston/
+# https://stablemarkets.wordpress.com/2014/09/01/spatial-data-visualization-with-r/
+# http://bcb.dfci.harvard.edu/~aedin/courses/R/CDC/maps.html 
+# https://data.boston.gov/ 
 ```
 
 ```{r shinygraph, include = FALSE}
@@ -100,6 +141,66 @@ ggsave(filename = file.path("final_project_shiny","bluebike_streetlight_map.png"
 ```
 link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
+```{r maps, cache = T}
+
+# Used tidycensus for map of Boston; superimposed bike, tree, streetlight, and
+# crime data over it.
+
+suffolk_crime_map <- suffolk_map +
+  geom_point(crime, mapping = aes(Long, Lat), color = "red", alpha = 0.01) +
+  labs(title = "Crime Map of Suffolk County, MA",
+       caption = "Source: ANALYZE BOSTON CRIME INCIDENT REPORTS (AUGUST 2015 - TO DATE)") +
+  theme_void()
+
+suffolk_tree_map <- suffolk_map +
+  geom_point(trees, mapping = aes(X, Y), color = "dark green", alpha = 0.01) +
+  labs(title = "Tree Map of Suffolk County, MA",
+       caption = "Public Tree Data 2011") +
+  theme_void()
+
+suffolk_hubway_map <- suffolk_map +
+  geom_point(hubway, mapping = aes(X, Y), color = "red") +
+  theme_void()
+
+suffolk_bluebike_map <- suffolk_map +
+  geom_point(bluebikes, mapping = aes(latitude, longitude), color = "blue") +
+  theme_void()
+
+suffolk_streetlight_map <- suffolk_map +
+  geom_point(streetlights, mapping = aes(lat, long), color = "yellow") +
+  theme_void()
+
+# finding the average crime levels in areas with concentrated lights, bluebikes,
+# trees, trash receptacles, traffic statistical aspect can come from calculating
+# the densities, and then computing the correlation amongst densities. gganimate
+# of crime over time. Color dots, or size the dots based off of severity of
+# crime. Need to clean crime data to remove na values, maps for bikes and lights
+# need to show points. Facet wrap by type of crime. Group crime by year.
+
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+View(v18)
+```
+```{r crime density plot}
+suffolk + stat_density2d(data = crime,
+                 aes(x = Lat, y = Long, alpha=.75, fill=..level..),
+                 bins = 8,
+                 geom = 'polygon') +
+  guides(fill = guide_colorbar(barwidth = 1, barheight = 10)) +
+  geom_point(data=crime,aes(x=Lat,y=Long),
+             col='gray', alpha=.5,size=1) +
+  scale_alpha(guide = FALSE) +
+  xlab('')+ylab('') +
+  ggtitle('Crimes - 2015 to 2020 - Boston, MA')
+```
 
 
+
+
+
+```{r animate crime}
+# need to have year object from crime, but map takes suffolk data
+
+suffolk_crime_map + transition_time(YEAR) + 
+  labs(title = "Year: {frame_time}")
+```
 
