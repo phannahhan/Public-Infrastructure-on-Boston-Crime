@@ -45,6 +45,8 @@ parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.c
 
 trafficdata2014 <- read_csv("raw-data/trafficdata.csv", col_types = cols())
 
+trash <- read_csv("raw-data/big-belly-locations.csv", col_types = cols())
+
 crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols())%>%
   na.omit()
   
@@ -92,9 +94,9 @@ suffolk_map <- suffolk %>%
   scale_fill_viridis_c(direction = -1) +
   scale_color_viridis_c(direction = -1) +
   annotation_north_arrow(location = "bl", which_north = "true", 
-                         pad_x = unit(3.1, "in"), pad_y = unit(0.1, "in"),
+                         pad_x = unit(2.8, "in"), pad_y = unit(0.1, "in"),
                          style = north_arrow_fancy_orienteering) +
-  theme_void()
+  scale_x_continuous(breaks = seq(-71.16, -71.01, by = .03))
 
 
 bluebike_map <- suffolk_map +
@@ -102,21 +104,27 @@ bluebike_map <- suffolk_map +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
   geom_point(bluebikes, mapping = aes(longitude, latitude), color = "blue") +
-  scale_x_continuous(name = "Long", breaks = c(-71.125, -71.15, -71.05))
-
+  scale_x_continuous(breaks = seq(-71.16, -71.01, by = .03))
 
 streetlight_map <- suffolk_map +
   geom_sf(color = "black", fill = "black") +
   geom_point(streetlights, mapping = aes(long, lat), color = "yellow", alpha = 0.01) +
-  ggtitle("Streetlight Map of Suffolk County, MA")
-
+  labs(title = "Streetlight Map of Suffolk County, MA",
+       caption = "Source: Boston Analyze Streetlight Data",
+       x = "Longitude",
+       y = "Latitude")
 
 tree_map <- suffolk_map +
   geom_point(trees, mapping = aes(X, Y), color = "dark green", alpha = 0.01) +
   labs(title = "Tree Map of Suffolk County, MA",
-       caption = "Boston Analyze Public Tree Data 2011") +
-  theme_void()
+       caption = "Source: Boston Analyze Public Tree Data 2011",
+       x = "Longitude",
+       y = "Latitude")
 
+trash_map <- suffolk_map +
+  geom_point(trees, mapping = aes(X, Y), color = "purple", alpha = 0.01) +
+  labs(title = "Trash Receptacle Map of Suffolk County, MA",
+       caption = "Source: Department of Innovation and Technology Public Big Belly Data")
 
 crime_map <- suffolk_map +
   geom_sf(color = "black", fill = "lightgreen") +
@@ -124,13 +132,13 @@ crime_map <- suffolk_map +
        caption = "Source: ANALYZE BOSTON CRIME INCIDENT REPORTS (AUGUST 2015 - TO DATE)") +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
-  geom_point(crime, mapping = aes(Long, Lat), color = "red", alpha = 0.01) +
-  scale_x_continuous(name = "Long", breaks = c(-71.125, -71.15, -71.05))
+  geom_point(crime, mapping = aes(Long, Lat), color = "red", alpha = 0.01)
 
 suffolk_map
 bluebike_map
 streetlight_map
 tree_map
+trash_map
 crime_map
 
 # look into cex argument to adjust size of the dots? check out social explorer
@@ -160,16 +168,30 @@ link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
 ```{r crime density plot}
 
-auto_theft <- crime %>%
-  filter(OFFENSE_CODE_GROUP == "Auto Theft") %>%
+violentcrimes <- crime %>%
+  filter(OFFENSE_CODE_GROUP == "Aggravated Assault" 
+         & OFFENSE_CODE_GROUP == "Homicide" & OFFENSE_CODE_GROUP == "Robbery")
                    
-suffolk_map + stat_density2d(data = auto_theft,
+suffolk_map + stat_density2d(data = violentcrimes,
                 mapping = aes(x = Long, y = Lat, alpha=.75, fill=..level..),
                  bins = 8,
                  geom = 'polygon') +
   guides(fill = guide_colorbar(barwidth = 1, barheight = 10)) +
-  geom_point(data=auto_theft,aes(x = Lat, y = Long),
-             col='red', alpha=.5,size=1) +
+  geom_point(data = violentcrimes, 
+             aes(x = Long, y = Lat),
+             col='gray', alpha=.5,size=1) +
+  scale_alpha(guide = FALSE) +
+  xlab('')+ylab('') +
+  ggtitle('Crimes - 2015 to 2020 - Boston, MA')
+
+density <- ggplot(violentcrimes, mapping = aes(Long, Lat)) +
+  geom_point(col='gray', alpha=.5,size=1) +
+  stat_density2d(violentcrimes, alpha=.75, mapping = aes(fill=..density..),
+                 bins = 8,
+                 geom = 'polygon') +
+  guides(fill = guide_colorbar(barwidth = 1, barheight = 10))
+
+
   scale_alpha(guide = FALSE) +
   xlab('')+ylab('') +
   ggtitle('Crimes - 2015 to 2020 - Boston, MA')
@@ -189,7 +211,18 @@ suffolk_crime_map + transition_time(YEAR) +
 # the densities, and then computing the correlation amongst densities. gganimate
 # of crime over time. Color dots, or size the dots based off of severity of
 # crime. Need to clean crime data to remove na values, maps for bikes and lights
-# need to show points. Facet wrap by type of crime. Group crime by yea
+# need to show points. Facet wrap by type of crime. Group crime by year.
+# The most difficult aspect was calculating the densities. I needed to make a
+# decision on how I wanted to segment the map to calculate the densities of each
+# amenity for that segmented area. At first, I wanted to divide the map into a
+# square grid and calculate the densities of each square, but then I realized
+# that squares that included land outside of Suffolk County would inaccurately
+# have a lower density of each amenity, so I made the decision to pick areas
+# that only included Suffolk County land, counting the number of amenities and
+# dividing it by the unit of land to get concentration/density.
+
+library(geosphere)
+distm (c(lon1, lat1), c(lon2, lat2), fun = distHaversine)
 
 ```
 
