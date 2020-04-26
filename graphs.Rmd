@@ -28,14 +28,21 @@ library(tigris)
 options(tigris_use_cache = TRUE)
 library(gganimate)
 theme_set(theme_bw())
+library(imputeTS)
 ```
 
 ```{r data, include = FALSE, cache = T}
 bluebikes <- read_csv("raw-data/current_bluebikes_stations.csv", skip = 1, col_types = cols()) %>%
-  clean_names()
+  clean_names() %>%
+  rename(Long = longitude,
+         Lat = latitude) %>%
+  na.omit()
 
 streetlights <- read_csv("raw-data/streetlight-locations.csv", col_types = cols()) %>%
-  clean_names()
+  clean_names() %>%
+  rename(Long = long,
+         Lat = lat) %>%
+  na.omit()
 
 parkboston2015 <- read_csv("raw-data/park-boston-monthly-transactions-by-zone-2015.csv", col_types = cols()) %>%
   clean_names()
@@ -45,13 +52,17 @@ parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.c
 
 trafficdata2014 <- read_csv("raw-data/trafficdata.csv", col_types = cols())
 
-trash <- read_csv("raw-data/big-belly-locations.csv", col_types = cols())
+trash <- read_csv("raw-data/big-belly-locations.csv", col_types = cols()) %>%
+  clean_names() %>%
+  na.omit()
 
-crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols())%>%
+crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols()) %>%
   na.omit()
   
-
-trees <- read_csv("raw-data/Trees.csv", col_types = cols())
+trees <- read_csv("raw-data/Trees.csv", col_types = cols()) %>%
+  na.omit() %>%
+  rename(Long = X,
+         Lat = Y)
 
 hubway <- read_csv("raw-data/Hubway_Stations.csv", col_types = cols())
 ```
@@ -132,7 +143,7 @@ crime_map <- suffolk_map +
        caption = "Source: ANALYZE BOSTON CRIME INCIDENT REPORTS (AUGUST 2015 - TO DATE)") +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
-  geom_point(crime, mapping = aes(Long, Lat), color = "red", alpha = 0.01)
+  geom_point(crime, mapping = aes(Long, Lat), color = "red", alpha = 0.3)
 
 suffolk_map
 bluebike_map
@@ -166,46 +177,8 @@ ggsave(filename = file.path("final_project_shiny","bluebike_streetlight_map.png"
 ```
 link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
-```{r crime density plot}
 
-violentcrimes <- crime %>%
-  filter(OFFENSE_CODE_GROUP == "Aggravated Assault" 
-         & OFFENSE_CODE_GROUP == "Homicide" & OFFENSE_CODE_GROUP == "Robbery")
-                   
-suffolk_map + stat_density2d(data = violentcrimes,
-                mapping = aes(x = Long, y = Lat, alpha=.75, fill=..level..),
-                 bins = 8,
-                 geom = 'polygon') +
-  guides(fill = guide_colorbar(barwidth = 1, barheight = 10)) +
-  geom_point(data = violentcrimes, 
-             aes(x = Long, y = Lat),
-             col='gray', alpha=.5,size=1) +
-  scale_alpha(guide = FALSE) +
-  xlab('')+ylab('') +
-  ggtitle('Crimes - 2015 to 2020 - Boston, MA')
-
-density <- ggplot(violentcrimes, mapping = aes(Long, Lat)) +
-  geom_point(col='gray', alpha=.5,size=1) +
-  stat_density2d(violentcrimes, alpha=.75, mapping = aes(fill=..density..),
-                 bins = 8,
-                 geom = 'polygon') +
-  guides(fill = guide_colorbar(barwidth = 1, barheight = 10))
-
-
-  scale_alpha(guide = FALSE) +
-  xlab('')+ylab('') +
-  ggtitle('Crimes - 2015 to 2020 - Boston, MA')
-```
-
-
-```{r animate crime}
-# need to have year object from crime, but map takes suffolk data
-
-suffolk_crime_map + transition_time(YEAR) + 
-  labs(title = "Year: {frame_time}")
-```
-
-```{r statistical graphs}
+```{r statistical graphs streetlights vs. crime}
 # finding the average crime levels in areas with concentrated lights, bluebikes,
 # trees, trash receptacles, traffic statistical aspect can come from calculating
 # the densities, and then computing the correlation amongst densities. gganimate
@@ -219,35 +192,141 @@ suffolk_crime_map + transition_time(YEAR) +
 # that squares that included land outside of Suffolk County would inaccurately
 # have a lower density of each amenity, so I made the decision to pick areas
 # that only included Suffolk County, counting the number of amenities and
-# dividing it by the unit of land to get concentration/density.
+# dividing it by the count of each amenity to get the concentration/density.
 
 crime_count_zone <- crime %>%
-  mutate(zone = case_when(
-    Long > -71.16 & Long < -71.13 & Lat > 42.26 & Lat < 42.28 ~ "zone1",
-    Long > -71.13 & Long < -71.10 & Lat > 42.26 & Lat < 42.28 ~ "zone2",
-    Long > -71.10 & Long < -71.07 & Lat > 42.26 & Lat < 42.28 ~ "zone3",
-    Long > -71.07 & Long < -71.04 & Lat > 42.26 & Lat < 42.28 ~ "zone4",
-    Long > -71.16 & Long < -71.13 & Lat > 42.28 & Lat < 42.3 ~ "zone5",
-    Long > -71.13 & Long < -71.10 & Lat > 42.28 & Lat < 42.3 ~ "zone6",
-    Long > -71.10 & Long < -71.07 & Lat > 42.28 & Lat < 42.3 ~ "zone7",
-    Long > -71.07 & Long < -71.04 & Lat > 42.28 & Lat < 42.3 ~ "zone8",
-    Long > -71.13 & Long < -71.10 & Lat > 42.3 & Lat < 42.32 ~ "zone9",
-    Long > -71.10 & Long < -71.07 & Lat > 42.3 & Lat < 42.32 ~ "zone10",
-    Long > -71.07 & Long < -71.04 & Lat > 42.3 & Lat < 42.32 ~ "zone11",
-    Long > -71.13 & Long < -71.10 & Lat > 42.32 & Lat < 42.34 ~ "zone12",
-    Long > -71.10 & Long < -71.07 & Lat > 42.32 & Lat < 42.34 ~ "zone13",
-    Long > -71.07 & Long < -71.04 & Lat > 42.32 & Lat < 42.34 ~ "zone14",
-    Long > -71.16 & Long < -71.13 & Lat > 42.34 & Lat < 42.36 ~ "zone15",
-    Long > -71.10 & Long < -71.07 & Lat > 42.34 & Lat < 42.36 ~ "zone16",
-    Long > -71.07 & Long < -71.04 & Lat > 42.34 & Lat < 42.36 ~ "zone17",
-    Long > -71.04 & Long < -71.01 & Lat > 42.34 & Lat < 42.36 ~ "zone18",
-    Long > -71.07 & Long < -71.04 & Lat > 42.36 & Lat < 42.38 ~ "zone19",
-    Long > -71.04 & Long < -71.01 & Lat > 42.36 & Lat < 42.38 ~ "zone20",
-    Long > -71.04 & Long < -71.01 & Lat > 42.38 & Lat < 42.40 ~ "zone21")) %>%
+  mutate(zone = case_when(Long > -71.16 & Long < -71.13 & Lat > 42.26 & Lat < 42.28 ~ "z1",
+    Long > -71.13 & Long < -71.10 & Lat > 42.26 & Lat < 42.28 ~ "z2",
+    Long > -71.10 & Long < -71.07 & Lat > 42.26 & Lat < 42.28 ~ "z3",
+    Long > -71.07 & Long < -71.04 & Lat > 42.26 & Lat < 42.28 ~ "z4",
+    Long > -71.16 & Long < -71.13 & Lat > 42.28 & Lat < 42.3 ~ "z5",
+    Long > -71.13 & Long < -71.10 & Lat > 42.28 & Lat < 42.3 ~ "z6",
+    Long > -71.10 & Long < -71.07 & Lat > 42.28 & Lat < 42.3 ~ "z7",
+    Long > -71.07 & Long < -71.04 & Lat > 42.28 & Lat < 42.3 ~ "z8",
+    Long > -71.13 & Long < -71.10 & Lat > 42.3 & Lat < 42.32 ~ "z9",
+    Long > -71.10 & Long < -71.07 & Lat > 42.3 & Lat < 42.32 ~ "z10",
+    Long > -71.07 & Long < -71.04 & Lat > 42.3 & Lat < 42.32 ~ "z11",
+    Long > -71.13 & Long < -71.10 & Lat > 42.32 & Lat < 42.34 ~ "z12",
+    Long > -71.10 & Long < -71.07 & Lat > 42.32 & Lat < 42.34 ~ "z13",
+    Long > -71.07 & Long < -71.04 & Lat > 42.32 & Lat < 42.34 ~ "z14",
+    Long > -71.16 & Long < -71.13 & Lat > 42.34 & Lat < 42.36 ~ "z15",
+    Long > -71.10 & Long < -71.07 & Lat > 42.34 & Lat < 42.36 ~ "z16",
+    Long > -71.07 & Long < -71.04 & Lat > 42.34 & Lat < 42.36 ~ "z17",
+    Long > -71.04 & Long < -71.01 & Lat > 42.34 & Lat < 42.36 ~ "z18",
+    Long > -71.07 & Long < -71.04 & Lat > 42.36 & Lat < 42.38 ~ "z19",
+    Long > -71.04 & Long < -71.01 & Lat > 42.36 & Lat < 42.38 ~ "z20",
+    Long > -71.04 & Long < -71.01 & Lat > 42.38 & Lat < 42.40 ~ "z21")) %>%
   filter(!is.na(zone))
 
+crime_count_histogram <- crime_count_zone %>%
+  rename(Zone = zone) %>%
+  ggplot(aes(Zone)) +
+  geom_bar(stat = "count") +
+  labs(title = "Crime Count per Zone in Suffolk, MA",
+       subtitle = "Data From 2015 - Present",
+       y = "Number of Crimes")
 
+streetlight_count_zone <- streetlights %>%
+  mutate(zone = case_when(Long > -71.16 & Long < -71.13 & Lat > 42.26 & Lat < 42.28 ~ "z1",
+    Long > -71.13 & Long < -71.10 & Lat > 42.26 & Lat < 42.28 ~ "z2",
+    Long > -71.10 & Long < -71.07 & Lat > 42.26 & Lat < 42.28 ~ "z3",
+    Long > -71.07 & Long < -71.04 & Lat > 42.26 & Lat < 42.28 ~ "z4",
+    Long > -71.16 & Long < -71.13 & Lat > 42.28 & Lat < 42.3 ~ "z5",
+    Long > -71.13 & Long < -71.10 & Lat > 42.28 & Lat < 42.3 ~ "z6",
+    Long > -71.10 & Long < -71.07 & Lat > 42.28 & Lat < 42.3 ~ "z7",
+    Long > -71.07 & Long < -71.04 & Lat > 42.28 & Lat < 42.3 ~ "z8",
+    Long > -71.13 & Long < -71.10 & Lat > 42.3 & Lat < 42.32 ~ "z9",
+    Long > -71.10 & Long < -71.07 & Lat > 42.3 & Lat < 42.32 ~ "z10",
+    Long > -71.07 & Long < -71.04 & Lat > 42.3 & Lat < 42.32 ~ "z11",
+    Long > -71.13 & Long < -71.10 & Lat > 42.32 & Lat < 42.34 ~ "z12",
+    Long > -71.10 & Long < -71.07 & Lat > 42.32 & Lat < 42.34 ~ "z13",
+    Long > -71.07 & Long < -71.04 & Lat > 42.32 & Lat < 42.34 ~ "z14",
+    Long > -71.16 & Long < -71.13 & Lat > 42.34 & Lat < 42.36 ~ "z15",
+    Long > -71.10 & Long < -71.07 & Lat > 42.34 & Lat < 42.36 ~ "z16",
+    Long > -71.07 & Long < -71.04 & Lat > 42.34 & Lat < 42.36 ~ "z17",
+    Long > -71.04 & Long < -71.01 & Lat > 42.34 & Lat < 42.36 ~ "z18",
+    Long > -71.07 & Long < -71.04 & Lat > 42.36 & Lat < 42.38 ~ "z19",
+    Long > -71.04 & Long < -71.01 & Lat > 42.36 & Lat < 42.38 ~ "z20",
+    Long > -71.04 & Long < -71.01 & Lat > 42.38 & Lat < 42.40 ~ "z21")) %>%
+  filter(!is.na(zone))
 
+streetlight_count_histogram <- streetlight_count_zone %>%
+  rename(Zone = zone) %>%
+  ggplot(aes(Zone)) +
+  geom_bar(stat = "count") +
+  labs(title = "Streetlight Count per Zone in Suffolk, MA",
+       subtitle = "Data from Boston Analyze, 2020",
+       y = "Number of Streetlights")
 
+# To do a regression, I want to make a new table using pivot where the columns are the counts for crime, streetlights, bikes, etc., and the rows are the zones
+
+crime_freq <- crime_count_zone %>%
+  select(zone) %>%
+  count(zone)
+
+streetlight_freq <- streetlight_count_zone %>%
+  select(zone) %>%
+  count(zone)
+
+crime_streetlight <- full_join(crime_freq, streetlight_freq, by = "zone") %>%
+  na_replace(fill = 0)
+
+crime_street_relation <- crime_streetlight %>%
+  ggplot(., aes(n.y, n.x)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, formula = 'y ~ x') +
+  labs(title = "Relationship Between Streetlight and Crime Densities",
+       x = "Streetlights",
+       y = "Crime Rates")
+
+```
+
+```{r statistical graphs trees vs. crime}
+tree_count_zone <- trees %>%
+  mutate(zone = case_when(Long > -71.16 & Long < -71.13 & Lat > 42.26 & Lat < 42.28 ~ "z1",
+    Long > -71.13 & Long < -71.10 & Lat > 42.26 & Lat < 42.28 ~ "z2",
+    Long > -71.10 & Long < -71.07 & Lat > 42.26 & Lat < 42.28 ~ "z3",
+    Long > -71.07 & Long < -71.04 & Lat > 42.26 & Lat < 42.28 ~ "z4",
+    Long > -71.16 & Long < -71.13 & Lat > 42.28 & Lat < 42.3 ~ "z5",
+    Long > -71.13 & Long < -71.10 & Lat > 42.28 & Lat < 42.3 ~ "z6",
+    Long > -71.10 & Long < -71.07 & Lat > 42.28 & Lat < 42.3 ~ "z7",
+    Long > -71.07 & Long < -71.04 & Lat > 42.28 & Lat < 42.3 ~ "z8",
+    Long > -71.13 & Long < -71.10 & Lat > 42.3 & Lat < 42.32 ~ "z9",
+    Long > -71.10 & Long < -71.07 & Lat > 42.3 & Lat < 42.32 ~ "z10",
+    Long > -71.07 & Long < -71.04 & Lat > 42.3 & Lat < 42.32 ~ "z11",
+    Long > -71.13 & Long < -71.10 & Lat > 42.32 & Lat < 42.34 ~ "z12",
+    Long > -71.10 & Long < -71.07 & Lat > 42.32 & Lat < 42.34 ~ "z13",
+    Long > -71.07 & Long < -71.04 & Lat > 42.32 & Lat < 42.34 ~ "z14",
+    Long > -71.16 & Long < -71.13 & Lat > 42.34 & Lat < 42.36 ~ "z15",
+    Long > -71.10 & Long < -71.07 & Lat > 42.34 & Lat < 42.36 ~ "z16",
+    Long > -71.07 & Long < -71.04 & Lat > 42.34 & Lat < 42.36 ~ "z17",
+    Long > -71.04 & Long < -71.01 & Lat > 42.34 & Lat < 42.36 ~ "z18",
+    Long > -71.07 & Long < -71.04 & Lat > 42.36 & Lat < 42.38 ~ "z19",
+    Long > -71.04 & Long < -71.01 & Lat > 42.36 & Lat < 42.38 ~ "z20",
+    Long > -71.04 & Long < -71.01 & Lat > 42.38 & Lat < 42.40 ~ "z21")) %>%
+  filter(!is.na(zone))
+
+tree_count_histogram <- tree_count_zone %>%
+  rename(Zone = zone) %>%
+  ggplot(aes(Zone)) +
+  geom_bar(stat = "count") +
+  labs(title = "Tree Count per Zone in Suffolk, MA",
+       subtitle = "Data from Boston Analyze, 2020",
+       y = "Number of Streetlights")
+
+tree_freq <- tree_count_zone %>%
+  select(zone) %>%
+  count(zone)
+
+crime_tree <- full_join(crime_freq, tree_freq, by = "zone") %>%
+  na_replace(fill = 0)
+
+crime_tree_relation <- crime_tree %>%
+  ggplot(., aes(n.y, n.x)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, formula = 'y ~ x') +
+  labs(title = "Relationship Between Streetlight and Crime Densities",
+       x = "Streetlights",
+       y = "Crime Rates")
 ```
 
