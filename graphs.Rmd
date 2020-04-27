@@ -29,6 +29,7 @@ options(tigris_use_cache = TRUE)
 library(gganimate)
 theme_set(theme_bw())
 library(imputeTS)
+library(broom)
 ```
 
 ```{r data, include = FALSE, cache = T}
@@ -52,10 +53,10 @@ parkingtickets2014 <- read_csv("raw-data/parking-tickets-portal-web-statistics.c
 
 trafficdata2014 <- read_csv("raw-data/trafficdata.csv", col_types = cols())
 
-trash <- read_csv("raw-data/big-belly-locations.csv", col_types = cols()) %>%
-  clean_names() %>%
-  na.omit() %>%
-  separate(location, c("Long", "Lat"), sep = ", ")
+#trash <- read_csv("raw-data/big-belly-locations.csv", col_types = cols()) %>%
+#  clean_names() %>%
+#  na.omit() %>%
+#  separate(location, c("Long", "Lat"), sep = ", ")
 #fix
 
 crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols()) %>%
@@ -151,7 +152,7 @@ suffolk_map
 bluebike_map
 streetlight_map
 tree_map
-trash_map
+# trash_map
 crime_map
 
 # look into cex argument to adjust size of the dots? check out social explorer
@@ -381,6 +382,31 @@ joined_data <- full_join(crime_streetlight, crime_tree, by = c("zone", "Crimes")
   full_join(crime_bluebike, by = c("zone", "Crimes"))
 ```
 
+```{r gt table}
+gt_logged_joined_data <- joined_data %>%
+  filter(Crimes != 0 &
+          Streetlights != 0 &
+         Bluebikes != 0 &
+         Trees != 0) %>%
+  mutate(log_crimes = log(Crimes),
+         log_streetlights = log(Streetlights),
+         log_bluebikes = log(Bluebikes),
+         log_trees = log(Trees)) %>%
+  lm(log_crimes ~ log_streetlights * log_bluebikes * log_trees, data = .) %>%
+  tidy(conf.int = TRUE, conf.level = 0.90) %>%
+  mutate_if(is.numeric, round, digits = 2) %>%
+  clean_names() %>% 
+  select(-std_error, -statistic, -p_value) %>% 
+  rename("5th Percentile" = conf_low,
+         "95th Percentile" = conf_high,
+         "Coefficient" = estimate,
+         "Term" = term) %>% 
+  gt() %>%
+  tab_header(title = "Effect of Public Amenities on Crime Rates in Boston") %>%
+  tab_spanner(label = "All variables are logged",
+              columns = vars(Term, Coefficient, "5th Percentile", "95th Percentile")) %>%
+  cols_align(align = "left", columns = vars(Term))
+```
 
 
 
@@ -413,27 +439,7 @@ bluebike_count_histogram
 crime_bluebike_relation %>%
   ggsave(filename = file.path("final_project_shiny","crime_bluebike_relation.png"))
 
-logged_joined_data <- joined_data %>%
-  filter(Crimes != 0 &
-          Streetlights != 0 &
-         Bluebikes != 0 &
-         Trees != 0) %>%
-  mutate(log_crimes = log(Crimes),
-         log_streetlights = log(Streetlights),
-         log_bluebikes = log(Bluebikes),
-         log_trees = log(Trees)) %>%
-  tidy(conf.int = T) %>%
-  select(term, estimate, conf.low, conf.high)
-  
-  lm(log_crimes ~ log_streetlights * log_bluebikes * log_trees, data = .) %>%
-       tidy(conf.int = T, conf.level = 0.90) %>%
-       mutate_if(is.numeric, round, digits = 2) %>%
-       clean_names() %>% 
-       select(-std_error, -statistic, -p_value) %>% 
-       rename("5th Percentile" = conf_low,
-              "95th Percentile" = conf_high,
-              "Coefficient" = estimate,
-              "Term" = term) %>% 
-       gt()
+gt_logged_joined_data
+ggsave(filename = file.path("final_project_shiny","gt_logged_joined_data.png"))
 ```
 link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/

@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 library(tidyverse)
+library(broom)
 library(dplyr)
 library(ggplot2)
 library(tidycensus)
@@ -247,7 +248,7 @@ bluebike_count_zone <- bluebikes %>%
 crime_freq <- crime_count_zone %>%
   select(zone) %>%
   count(zone) %>%
-  rename(Crime = n)
+  rename(Crimes = n)
 
 streetlight_freq <- streetlight_count_zone %>%
   select(zone) %>%
@@ -273,8 +274,8 @@ bluebike_freq <- bluebike_count_zone %>%
 crime_bluebike <- full_join(crime_freq, bluebike_freq, by = "zone") %>%
   na_replace(fill = 0)
 
-joined_data <- full_join(crime_streetlight, crime_tree, by = c("zone", "Crime")) %>%
-  full_join(crime_bluebike, by = c("zone", "Crime"))
+joined_data <- full_join(crime_streetlight, crime_tree, by = c("zone", "Crimes")) %>%
+  full_join(crime_bluebike, by = c("zone", "Crimes"))
 
 
 # code for maps
@@ -440,7 +441,7 @@ server <- function(input, output) {
    
    output$relationPlot <- renderPlot({
      joined_data %>%
-       ggplot(., aes_string(input$stat, "Crime")) +
+       ggplot(., aes_string(input$stat, "Crimes")) +
        geom_point(color = "red") +
        geom_smooth(method = "lm", se = FALSE, formula = 'y ~ x') +
        labs(title = "Relationship Between Selected Amenity and Crime",
@@ -449,8 +450,19 @@ server <- function(input, output) {
    })
    
    output$gttable <- renderTable({
-     regression_table <- joined_data %>%
-       lm(Crime ~ Streetlights * Bluebikes * Trees, data = .) %>%
+     
+     if (input$table == TRUE) {
+     
+     joined_data %>%
+       filter(Crimes != 0 &
+                Streetlights != 0 &
+                Bluebikes != 0 &
+                Trees != 0) %>%
+       mutate(log_crimes = log(Crimes),
+              log_streetlights = log(Streetlights),
+              log_bluebikes = log(Bluebikes),
+              log_trees = log(Trees)) %>%
+       lm(log_crimes ~ log_streetlights * log_bluebikes * log_trees, data = .) %>%
        tidy(conf.int = TRUE, conf.level = 0.90) %>%
        mutate_if(is.numeric, round, digits = 2) %>%
        clean_names() %>% 
@@ -459,7 +471,12 @@ server <- function(input, output) {
               "95th Percentile" = conf_high,
               "Coefficient" = estimate,
               "Term" = term) %>% 
-       gt()
+       gt() %>%
+       tab_header(title = "Effect of Public Amenities on Crime Rates in Boston") %>%
+       tab_spanner(label = "All variables are logged",
+                   columns = vars(Term, Coefficient, "5th Percentile", "95th Percentile")) %>%
+       cols_align(align = "left", columns = vars(Term))
+     }
    })
 }
 
