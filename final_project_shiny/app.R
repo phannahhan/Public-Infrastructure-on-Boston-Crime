@@ -409,9 +409,14 @@ ui <- fluidPage(
       h4("By Hannah Phan"),
       h3("Why Crime Levels in Boston?"),
       p(
-        "COMPLETE: Generational changes, gentrification, urban renewel"
+        "I wanted to take on this project because as someone who grew up in the Greater Boston Area and spent a lot of time walking around the streets of Boston’s neighborhoods, I’ve seen the city change physically, culturally, and socio-economically. These changes are heavily induced by gentrification, but while I always associated gentrification with rising property values and costs of living, gentrification also catalyzes different forms of urban renewal, specifically public infrastructure. When I came across the crime data for the city of Boston, I wanted to know if there was a strong association between the types of public infrastructure and amenities and crime levels. I also recognize that there are many confounding variables that this project is not accounting for, and the one factor that I believe is most influential that I did not consider before structuring this project is the fact that more infrastructure does not necessarily cause or allow for higher level of crimes, but rather areas with more trees, streetlights, bikes, etc. are more likely to be more densely populated, which may lead to a higher absolute number of crimes, but necessarily more crimes per capita."
       )
     ),
+    
+    tabPanel(
+      title = "About",
+      h3("How Did I Conduct This Analysis?")
+    )
     
     tabPanel(
       title = "Public Infrastructure and Amenity Relations",
@@ -431,7 +436,7 @@ ui <- fluidPage(
   tabPanel(
     title = "Multiple Regression on Public Amenities vs. Crime",
     
-    mainPanel(tableOutput("gttable"))
+    mainPanel(imageOutput("gttable"))
   )
   )
 )
@@ -449,35 +454,13 @@ server <- function(input, output) {
             y = "Crime Rates")
    })
    
-   output$gttable <- renderTable({
-     
-     if (input$table == TRUE) {
-     
-     joined_data %>%
-       filter(Crimes != 0 &
-                Streetlights != 0 &
-                Bluebikes != 0 &
-                Trees != 0) %>%
-       mutate(log_crimes = log(Crimes),
-              log_streetlights = log(Streetlights),
-              log_bluebikes = log(Bluebikes),
-              log_trees = log(Trees)) %>%
-       lm(log_crimes ~ log_streetlights * log_bluebikes * log_trees, data = .) %>%
-       tidy(conf.int = TRUE, conf.level = 0.90) %>%
-       mutate_if(is.numeric, round, digits = 2) %>%
-       clean_names() %>% 
-       select(-std_error, -statistic, -p_value) %>% 
-       rename("5th Percentile" = conf_low,
-              "95th Percentile" = conf_high,
-              "Coefficient" = estimate,
-              "Term" = term) %>% 
-       gt() %>%
-       tab_header(title = "Effect of Public Amenities on Crime Rates in Boston") %>%
-       tab_spanner(label = "All variables are logged",
-                   columns = vars(Term, Coefficient, "5th Percentile", "95th Percentile")) %>%
-       cols_align(align = "left", columns = vars(Term))
-     }
-   })
+   output$gttable <- renderImage({
+     list(src = "gttable.png",
+          contentType = 'image/png',
+          width = 600,
+          height = 400,
+          alt = "This is alternate text"
+     )}, deleteFile = FALSE)
 }
 
 # Run the application 
