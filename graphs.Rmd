@@ -56,7 +56,6 @@ trash <- read_csv("raw-data/big-belly-locations.csv", col_types = cols()) %>%
   clean_names() %>%
   na.omit() %>%
   separate(location, c("Long", "Lat"), sep = ", ")
-
 #fix
 
 crime <- read_csv("raw-data/tmpgwmn6nt4.csv", col_types = cols()) %>%
@@ -81,7 +80,7 @@ hubway <- read_csv("raw-data/Hubway_Stations.csv", col_types = cols())
 ## map, but I realized there's a higher density of streetlights than bluebikes,
 ## so I'll need to restyle the map for the next milestone.
 
-# Used tidycensus for map of Boston; superimposed bike, tree, streetlight, and
+# I chose to use tidycensus for map of Boston and superimposed bike, tree, streetlight, and
 # crime data over it.
 
 # finding the average crime levels in areas with concentrated lights, bluebikes,
@@ -117,28 +116,28 @@ bluebike_map <- suffolk_map +
   ggtitle("Bluebike Map of Suffolk County, MA") +
   coord_sf(xlim = c(-71.168, -71.005), ylim = c(42.266, 42.415), 
            expand = FALSE) +
-  geom_point(bluebikes, mapping = aes(longitude, latitude), color = "blue") +
+  geom_point(bluebikes, mapping = aes(Long, Lat), color = "blue") +
   scale_x_continuous(breaks = seq(-71.16, -71.01, by = .03))
 
 streetlight_map <- suffolk_map +
   geom_sf(color = "black", fill = "black") +
-  geom_point(streetlights, mapping = aes(long, lat), color = "yellow", alpha = 0.01) +
+  geom_point(streetlights, mapping = aes(Long, Lat), color = "yellow", alpha = 0.01) +
   labs(title = "Streetlight Map of Suffolk County, MA",
        caption = "Source: Boston Analyze Streetlight Data",
        x = "Longitude",
        y = "Latitude")
 
 tree_map <- suffolk_map +
-  geom_point(trees, mapping = aes(X, Y), color = "dark green", alpha = 0.01) +
+  geom_point(trees, mapping = aes(Long, Lat), color = "dark green", alpha = 0.01) +
   labs(title = "Tree Map of Suffolk County, MA",
        caption = "Source: Boston Analyze Public Tree Data 2011",
        x = "Longitude",
        y = "Latitude")
 
-trash_map <- suffolk_map +
-  geom_point(trees, mapping = aes(X, Y), color = "purple", alpha = 0.01) +
-  labs(title = "Trash Receptacle Map of Suffolk County, MA",
-       caption = "Source: Department of Innovation and Technology Public Big Belly Data")
+# trash_map <- suffolk_map +
+#   geom_point(trees, mapping = aes(Long, Lat), color = "purple", alpha = 0.01) +
+#  labs(title = "Trash Receptacle Map of Suffolk County, MA",
+#       caption = "Source: Department of Innovation and Technology Public Big Belly Data")
 
 crime_map <- suffolk_map +
   geom_sf(color = "black", fill = "lightgreen") +
@@ -167,18 +166,6 @@ crime_map
 # http://bcb.dfci.harvard.edu/~aedin/courses/R/CDC/maps.html 
 # https://data.boston.gov/ 
 ```
-
-```{r shinygraph, include = FALSE}
-
-# To make my shiny app, I followed the same format as ps6 to save my desired
-# graphic into a file in a folder in my repo and then rendered that image in the
-# app.R file. I want to build onto this by adding animations.
-
-suffolk_map %>%
-ggsave(filename = file.path("final_project_shiny","suffolk_map.png"))
-
-```
-link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
 
 
 ```{r statistical graphs streetlights vs. crime}
@@ -263,20 +250,9 @@ streetlight_count_histogram <- streetlight_count_zone %>%
 
 # To do a regression, I want to make a new table using pivot where the columns are the counts for crime, streetlights, bikes, etc., and the rows are the zones
 
-crime_freq <- crime_count_zone %>%
-  select(zone) %>%
-  count(zone)
-
-streetlight_freq <- streetlight_count_zone %>%
-  select(zone) %>%
-  count(zone)
-
-crime_streetlight <- full_join(crime_freq, streetlight_freq, by = "zone") %>%
-  na_replace(fill = 0)
-
 crime_street_relation <- crime_streetlight %>%
-  ggplot(., aes(n.y, n.x)) +
-  geom_point(color = "gold2") +
+  ggplot(., aes(Streetlights, Crimes)) +
+  geom_point(color = "red") +
   geom_smooth(method = "lm", se = FALSE, formula = 'y ~ x') +
   labs(title = "Relationship Between Streetlight and Crime Densities",
        x = "Streetlights",
@@ -317,15 +293,8 @@ tree_count_histogram <- tree_count_zone %>%
        subtitle = "Data from Boston Analyze, 2020",
        y = "Number of Trees")
 
-tree_freq <- tree_count_zone %>%
-  select(zone) %>%
-  count(zone)
-
-crime_tree <- full_join(crime_freq, tree_freq, by = "zone") %>%
-  na_replace(fill = 0)
-
 crime_tree_relation <- crime_tree %>%
-  ggplot(., aes(n.y, n.x)) +
+  ggplot(., aes(Trees, Crimes)) +
   geom_point(color = "dark green") +
   geom_smooth(method = "lm", se = FALSE, formula = 'y ~ x') +
   labs(title = "Relationship Between Tree and Crime Densities",
@@ -366,15 +335,8 @@ bluebike_count_histogram <- bluebike_count_zone %>%
        subtitle = "Data from Boston Analyze, 2020",
        y = "Number of Bluebikes")
 
-bluebike_freq <- bluebike_count_zone %>%
-  select(zone) %>%
-  count(zone)
-
-crime_bluebike <- full_join(crime_freq, bluebike_freq, by = "zone") %>%
-  na_replace(fill = 0)
-
 crime_bluebike_relation <- crime_bluebike %>%
-  ggplot(., aes(n.y, n.x)) +
+  ggplot(., aes(Bluebikes, Crimes)) +
   geom_point(color = "blue") +
   geom_smooth(method = "lm", se = FALSE, formula = 'y ~ x') +
   labs(title = "Relationship Between Bluebike and Crime Densities",
@@ -385,3 +347,93 @@ crime_bluebike_relation <- crime_bluebike %>%
 # type of crime
 ```
 
+```{r joined data}
+crime_freq <- crime_count_zone %>%
+  select(zone) %>%
+  count(zone) %>%
+  rename(Crimes = n)
+
+streetlight_freq <- streetlight_count_zone %>%
+  select(zone) %>%
+  count(zone) %>%
+  rename(Streetlights = n)
+
+crime_streetlight <- full_join(crime_freq, streetlight_freq, by = "zone") %>%
+  na_replace(fill = 0)
+
+tree_freq <- tree_count_zone %>%
+  select(zone) %>%
+  count(zone) %>%
+  rename(Trees = n)
+
+crime_tree <- full_join(crime_freq, tree_freq, by = "zone") %>%
+  na_replace(fill = 0)
+
+bluebike_freq <- bluebike_count_zone %>%
+  select(zone) %>%
+  count(zone) %>%
+  rename(Bluebikes = n)
+
+crime_bluebike <- full_join(crime_freq, bluebike_freq, by = "zone") %>%
+  na_replace(fill = 0)
+
+joined_data <- full_join(crime_streetlight, crime_tree, by = c("zone", "Crimes")) %>%
+  full_join(crime_bluebike, by = c("zone", "Crimes"))
+```
+
+
+
+
+```{r shinygraph, include = FALSE}
+
+# To make my shiny app, I followed the same format as ps6 to save my desired
+# graphic into a file in a folder in my repo and then rendered that image in the
+# app.R file. I want to build onto this by adding animations.
+
+suffolk_map %>%
+ggsave(filename = file.path("final_project_shiny","suffolk_map.png"))
+
+bluebike_map
+streetlight_map
+tree_map
+trash_map
+crime_map
+
+crime_count_histogram
+
+streetlight_count_histogram
+crime_street_relation %>%
+  ggsave(filename = file.path("final_project_shiny","crime_street_relation.png"))
+
+tree_count_histogram
+crime_tree_relation %>%
+  ggsave(filename = file.path("final_project_shiny","crime_tree_relation.png"))
+
+bluebike_count_histogram
+crime_bluebike_relation %>%
+  ggsave(filename = file.path("final_project_shiny","crime_bluebike_relation.png"))
+
+logged_joined_data <- joined_data %>%
+  filter(Crimes != 0 &
+          Streetlights != 0 &
+         Bluebikes != 0 &
+         Trees != 0) %>%
+  mutate(log_crimes = log(Crimes),
+         log_streetlights = log(Streetlights),
+         log_bluebikes = log(Bluebikes),
+         log_trees = log(Trees)) %>%
+  tidy(conf.int = T) %>%
+  select(term, estimate, conf.low, conf.high)
+  
+  lm(log_crimes ~ log_streetlights * log_bluebikes * log_trees, data = .) %>%
+       tidy(conf.int = T, conf.level = 0.90) %>%
+       mutate_if(is.numeric, round, digits = 2) %>%
+       clean_names() %>% 
+       select(-std_error, -statistic, -p_value) %>% 
+       rename("5th Percentile" = conf_low,
+              "95th Percentile" = conf_high,
+              "Coefficient" = estimate,
+              "Term" = term) %>% 
+       gt()
+```
+link to shiny app: https://hannah-phan.shinyapps.io/final_project_shiny/
