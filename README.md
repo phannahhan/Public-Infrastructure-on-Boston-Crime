@@ -7,5 +7,5 @@
 ## Repo Guide
 
 ##### about.Rmd : initial draft of the about page
-#### public-infra-crime.Rmd : An R Markdown version of my project, with detailed descriptions of how I chose to create my plots and maps.
-#### README.md
+##### public-infra-crime.Rmd : An R Markdown version of my project, with detailed descriptions of how I chose to create my plots and maps.
+##### README.md
